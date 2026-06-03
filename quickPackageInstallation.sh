@@ -2,20 +2,6 @@
 
 set -e
 
-echo "Creating Python virtual environment..."
-
-python3 -m venv venv
-
-source venv/bin/activate
-
-pip install --upgrade pip
-pip install numpy pandas scikit-learn flask pymongo
-
-echo "Updating package lists..."
-sudo apt update
-
-
-echo "Installing base packages..."
 sudo apt install -y \
     git \
     curl \
@@ -35,6 +21,20 @@ export NVM_DIR="$HOME/.nvm"
 nvm install 18.18.0
 nvm use 18.18.0
 
+echo "Creating Python virtual environment..."
+
+python3 -m venv venv
+
+source venv/bin/activate
+
+pip install --upgrade pip
+pip install numpy pandas scikit-learn flask pymongo
+
+echo "Updating package lists..."
+sudo apt update
+
+
+echo "Installing base packages..."
 
 echo "Installing Redis..."
 
