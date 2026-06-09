@@ -1,5 +1,6 @@
 import csv
 import re 
+# from collections import Counter
 
 def extract_features(password):
     """Extracts important features from a password"""
@@ -14,8 +15,6 @@ def extract_features(password):
         'has_lowercase' : any(c.islower() for c in password), 
         'has_number' : any(c.isdigit() for c in password), 
         'has_special' : any(not c.isalnum() for c in password),
-        # 'num_count': sum(1 for c in password if c.isdigit()), 
-        # 'special_count': sum(1 for c in password if not c.isalnum()), 
 
         # Advanced features
         'starts_with_upper': len(password) > 0 and password[0].isupper(),
@@ -25,24 +24,6 @@ def extract_features(password):
         'entropy': calculate_entropy(password) 
     }
     return features
-    # features = {
-    #     'password': password, 
-    #     'length': len(password), 
-    #     'has_uppercase' : True if any(c.isupper() for c in password) else False, 
-    #     'has_lowercase' : True if any(c.islower() for c in password) else False, 
-    #     'has_number' : True if any(c.isdigit() for c in password) else False, 
-    #     'has_special' : any(not c.isalnum() for c in password),
-    #     'num_count': sum(1 for c in password if c.isdigit()), 
-    #     'special_count': sum(1 for c in password if not c.isalnum()), 
-
-    #     #advance features
-    #     'starts_with_upper': len(password) > 0 and password[0].isupper(),
-    #     'ends_with_number': len(password) > 0 and password[-1].isdigit(),
-    #     'numbers_cluster': True if re.search(r'\d{2,}', password) else False, # sequential numbers
-    #     'keyboard_pattern' : True if any(p in password.lower() for p in ['qwerty', 'asdf', '123456']) else False,
-    #     'entropy': calculate_entropy(password) #randomness score
-    # }
-    # return features
 
 def calculate_entropy(password):
     """Calculates Shannon entropy (measure of randomness)"""
@@ -58,56 +39,74 @@ def calculate_entropy(password):
     # return min(entropy / 100, 1.0) # normalize to 0-1
 
 
-# testing training datasets
 
-# Open the file and read each line into a list
-with open("weak_passwords.txt", "rb") as weak:
-    # .strip() removes the newline characters (\n) from each line
-    weak_passwords = [line.strip() for line in weak if line.strip()]
+def assign_label(password):
+    
+    score = 0
 
-# Test that it loaded correctly
-print(f"Successfully loaded {len(weak_passwords)} weak passwords.")
-print("First 5 samples:", weak_passwords[:5])
+    # Length
+    if len(password) >= 12:
+        score += 2
+    elif len(password) >= 8:
+        score += 1
 
-# Open the file and read each line into a list
-with open("medium_passwords.txt", "rb") as medium:
-    # .strip() removes the newline characters (\n) from each line
-    medium_passwords = [line.strip() for line in medium if line.strip()]
+    # Character variety
+    if any(c.isupper() for c in password):
+        score += 1
 
-# Test that it loaded correctly
-print(f"Successfully loaded {len(medium_passwords)} medium passwords.")
-print("First 5 samples:", medium_passwords[:5])
+    if any(c.islower() for c in password):
+        score += 1
 
-# Open the file and read each line into a list
-with open("strong_passwords.txt", "rb") as strong:
-    # .strip() removes the newline characters (\n) from each line
-    strong_passwords = [line.strip() for line in strong if line.strip()]
+    if any(c.isdigit() for c in password):
+        score += 1
 
-# Test that it loaded correctly
-print(f"Successfully loaded {len(strong_passwords)} strong passwords.")
-print("First 5 samples:", strong_passwords[:5])
+    if any(not c.isalnum() for c in password):
+        score += 1
+
+    # Penalties
+    common_patterns = [
+        'password',
+        'admin',
+        'qwerty',
+        '123456',
+        'welcome',
+        'letmein'
+    ]
+
+    if any(pattern in password.lower() for pattern in common_patterns):
+        score -= 2
+
+    # Convert score to label
+    if score <= 2:
+        return 0      # Weak
+    elif score <= 5:
+        return 1      # Medium
+    else:
+        return 2      # Strong
+    
 
 
-data = []
+# Function to read the passwords from a text file and manually assign labels
+def read_password_from_file(filename):
+    with open(filename, 'r') as file:
+        passwords = file.read().splitlines()
+        
+    data = []
+    for password in passwords:
+        features = extract_features(password)
+        label = assign_label(password)
+        # label = 0 if len(password) <= 8 else (1 if 'password' not in password.lower() and 'admin' not in password.lower() else 2)
+        features['label'] = label
+        data.append(features)
+    
+    return data
 
-for pwd in weak_passwords:
-    features = extract_features(pwd)
-    features['label'] = 0
-    data.append(features)
-
-for pwd in medium_passwords:
-    features = extract_features(pwd)
-    features['label'] = 1
-    data.append(features)
-
-for pwd in strong_passwords:
-    features = extract_features(pwd)
-    features['label'] = 2
-    data.append(features)
-
+filename = 'text.txt'
+data_from_file = read_password_from_file(filename)
 
 # save it as a csv
 with open('password_data.csv', 'w') as f:
+    data = data_from_file
     writer = csv.DictWriter(f, fieldnames=data[0].keys())
     writer.writeheader()
     writer.writerows(data)
